@@ -45,6 +45,7 @@ int string_parseInt(const char* ch) {
     int st = 0, op = 1;
     if (ch[0] == '-') {
         st = 1;
+        op = -1;
     }
     int x = 0;
     int len=strlen(ch);

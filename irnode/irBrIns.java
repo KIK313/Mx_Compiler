@@ -1,8 +1,8 @@
 package irnode;
 
-public class irBrNode extends irTerIns {
+public class irBrIns extends irTerIns {
     public irBlock desBlk = null;
-    public irBrNode(irBlock desBlk) {
+    public irBrIns(irBlock desBlk) {
         super();
         this.desBlk = desBlk;
     }

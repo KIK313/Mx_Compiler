@@ -4,7 +4,8 @@ import utl.Type;
 import irnode.*;
 abstract public class expressionNode extends ASTNode {
     public Type nodeType;
-    public irEntity irVal;
+    public irEntity irVal = null;
+    public irRegister irPtr = null;
     public expressionNode(position pos) {
         super(pos);
     }

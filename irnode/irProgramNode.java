@@ -5,12 +5,14 @@ public class irProgramNode {
     public irMainNode mainNd;
     public List<irFuncNode> funcLis;
     public List<irGlobalVar> glbVarLis;
-    public List<irClassDef> classLis;
+    public List<irClassNode> classLis;
+    public List<irGlobalStringConst> strLis;
     public irProgramNode() {
         mainNd = new irMainNode();
         funcLis = new ArrayList<>();
         glbVarLis = new ArrayList<>();
         classLis = new ArrayList<>();
+        strLis = new ArrayList<>();
     }
     public void appendFunc(irFuncNode nd) {
         funcLis.add(nd);
@@ -18,19 +20,19 @@ public class irProgramNode {
     public void appendVar(irGlobalVar nd) {
         glbVarLis.add(nd);
     }
-    public void appendClass(irClassDef nd) {
+    public void appendClass(irClassNode nd) {
         classLis.add(nd);
     }
     public void printIr() {
-        for (irGlobalVar glbVarLi : glbVarLis) {
-            glbVarLi.printIr();
-        }
-        for (irClassDef classLi : classLis) {
-            classLi.printIr();
-        }
-        for (irFuncNode funcLi : funcLis) {
-            funcLi.printIr();
-        }
-        mainNd.printIr();
+//        for (irGlobalVar glbVarLi : glbVarLis) {
+//            glbVarLi.printIr();
+//        }
+//        for (irClassDef classLi : classLis) {
+//            classLi.printIr();
+//        }
+//        for (irFuncNode funcLi : funcLis) {
+//            funcLi.printIr();
+//        }
+//        mainNd.printIr();
     }
 }

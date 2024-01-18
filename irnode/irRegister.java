@@ -1,7 +1,8 @@
 package irnode;
 
 public class irRegister extends irEntity {
-    String name;
+    public String name;
+    public boolean isGlobal = false;
     public irRegister(String name, irType tp) {
         super(tp);
         this.name = name;

@@ -1,9 +1,9 @@
 package irnode;
 
-public class allocNode extends irInsNode {
+public class irAllocIns extends irInsNode {
     public irRegister reg;
     public irType tp;
-    public allocNode(irRegister reg, irType tp) {
+    public irAllocIns(irRegister reg, irType tp) {
         this.reg = reg;
         this.tp = tp;
     }

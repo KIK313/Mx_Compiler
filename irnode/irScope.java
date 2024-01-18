@@ -5,8 +5,6 @@ import java.util.HashMap;
 public class irScope {
     public HashMap<String, irRegister> Name2Reg;
     public irScope parentScope;
-    public irBlock retBlk = null;
-    public irRegister retPtr = null;
     public irBlock continue2Blk = null;
     public irBlock break2Blk = null;
     public irScope(irScope scope) {

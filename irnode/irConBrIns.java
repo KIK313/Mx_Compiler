@@ -1,9 +1,9 @@
 package irnode;
 
-public class irConBrNode extends irTerIns {
+public class irConBrIns extends irTerIns {
     public irEntity cond;
     public irBlock trBlk, falBlk;
-    public irConBrNode(irEntity cond, irBlock trBlk, irBlock falBlk) {
+    public irConBrIns(irEntity cond, irBlock trBlk, irBlock falBlk) {
         this.cond = cond;
         this.trBlk = trBlk;
         this.falBlk = trBlk;
