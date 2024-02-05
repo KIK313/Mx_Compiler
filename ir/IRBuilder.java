@@ -4,7 +4,6 @@ import irnode.*;
 import utl.Type;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Set;
 
 public class IRBuilder implements ASTVisitor {
@@ -20,19 +19,15 @@ public class IRBuilder implements ASTVisitor {
     public irRegister irThisPtr = null;
     public HashMap<String, irClassNode> className2ClassNode = new HashMap<>();
     public irMainNode mainNode = null;
-    public irClassNode curClass;
+    public irClassNode curClass = null;
+    public Type varDefTp;
     public int blkId = 0;
     public Type intTp = new Type("int");
     public Type boolTp = new Type("bool");
     public Type voidTp = new Type("void");
     public Type stringTp = new Type("string");
-    public void glbVarInit(Type tp, varinitNode nd, irGlobalVar def, irBlock ins) {
-        if (nd.nd == null) {
-            return;
-        }
-
-    }
     public void appendBlk(irBlock blk) {
+        // there is some problems
         if (curIrFuncNode != null) curIrFuncNode.appendBlock(blk);
         else mainNode.appendBlock(blk);
     }
@@ -45,10 +40,11 @@ public class IRBuilder implements ASTVisitor {
     @Override
     public void visit(ProgramNode it) {
         pr = new irProgramNode();
-        irBlock entryBlk = new irBlock("entry");
+        irBlock entryBlk = new irBlock("_entry");
         for (var u : it.lis) {
             if (u instanceof class_defNode) {
                 irClassNode o = new irClassNode(((class_defNode) u).name);
+                className2ClassNode.put(((class_defNode) u).name, o);
                 int cnt = 0;
                 for (var v: ((class_defNode) u).varLis) {
                     irType tp;
@@ -63,23 +59,36 @@ public class IRBuilder implements ASTVisitor {
                 }
                 pr.classLis.add(o);
             }
-        }
+        } // prepare for class info
         for (int i = 0; i < it.lis.size(); i++) {
             ProgramComp u = it.lis.get(i);
             if (u instanceof variable_defNode) {
                 Type tp = ((variable_defNode) u).tp;
                 irType g;
-                if (tp.equal(new Type("bool"))) g = irType.I1;
-                else if (tp.equal(new Type("int"))) g = irType.I32;
+                if (tp.equal(boolTp)) g = irType.I1;
+                else if (tp.equal(intTp)) g = irType.I32;
                 else g = irType.PTR;
                 for (int j = 0; j < ((variable_defNode) u).lis.size(); ++j) {
-                    irGlobalVar o = new irGlobalVar(g, ((variable_defNode) u).lis.get(i).name);
-                    glbVarInit(tp, ((variable_defNode) u).lis.get(j), o, entryBlk);
-                    pr.glbVarLis.add(o);
+                    irRegister o = new irRegister("glbVar", irType.PTR);
+                    o.isGlobal = true;
+                    currentScope.Name2Reg.put(((variable_defNode) u).lis.get(j).name, o);
                 }
             }
+        } // prepare for glbVar info
+        for (int i = 0; i < it.lis.size(); i++) {
+            ProgramComp u = it.lis.get(i);
+            if (u instanceof class_defNode) {
+                u.accept(this);
+            }
         }
-
+        for (int i = 0; i < it.lis.size(); i++) {
+            ProgramComp u = it.lis.get(i);
+            if (u instanceof variable_defNode) {
+                curBlk = entryBlk;
+                u.accept(this);
+                curBlk = null;
+            }
+        }
         // build function ir
         for (int i = 0; i < it.lis.size(); i++) {
             ProgramComp u = it.lis.get(i);
@@ -107,18 +116,31 @@ public class IRBuilder implements ASTVisitor {
     }
     @Override
     public void visit(func_defNode it) {
+        String funcName = null;
+        if (curClass == null) funcName = it.name;
+        else funcName = curClass.name + "." + it.name;
         irFuncRetBlk = null; irFuncRetPtr = null;
         mainNode = null;
-        // no class taken into consideration
         currentScope = new irScope(currentScope);
-        irFuncNode fn = new irFuncNode(it.name);
+        irFuncNode fn = new irFuncNode(funcName);
         pr.funcLis.add(fn);
         curIrFuncNode = fn;
         fn.returnType = trans2Irtype(it.tp);
         curBlk = new irBlock("entry"); fn.appendBlock(curBlk);
+        if (curClass != null) {
+            irRegister reg = new irRegister("this", irType.PTR);
+            irRegister pr = new irRegister("thisPtr", irType.PTR);
+            irThisPtr = pr;
+            curBlk.appendIns(new irAllocIns(pr, irType.PTR));
+            curBlk.appendIns(new irStoreIns(irType.PTR, reg, pr));
+            currentScope.Name2Reg.put("this", pr);
+            curIrFuncNode.arName.add(reg);
+            curIrFuncNode.arType.add(irType.PTR);
+        }
         if (it.ls != null) it.ls.accept(this);
         irBlock retBlk = new irBlock("retBlk");
         irFuncRetBlk = retBlk;
+        curBlk.terminalIns = new irBrIns(retBlk);
         if (curIrFuncNode.returnType == irType.VOID) retBlk.appendIns(new retNode());
         else {
             irRegister retVal = new irRegister("", curIrFuncNode.returnType);
@@ -129,7 +151,21 @@ public class IRBuilder implements ASTVisitor {
         }
         it.nd.accept(this);
         fn.appendBlock(retBlk);
+        curIrFuncNode = null;
         currentScope = currentScope.parentScope;
+    }
+    @Override
+    public void visit(paralistNode it) {
+        // thisPtr is considered before
+        for (int i = 0; i < it.name.size(); i++) {
+            irRegister reg = new irRegister("", trans2Irtype(it.tpLis.get(i)));
+            irRegister pr = new irRegister("", irType.PTR);
+            curBlk.appendIns(new irAllocIns(pr, reg.tp));
+            curBlk.appendIns(new irStoreIns(reg.tp, reg, pr));
+            currentScope.Name2Reg.put(it.name.get(i), pr);
+            curIrFuncNode.arName.add(reg);
+            curIrFuncNode.arType.add(reg.tp);
+        }
     }
     @Override
     public void visit(main_defNode it) {
@@ -146,10 +182,37 @@ public class IRBuilder implements ASTVisitor {
         irFuncRetPtr = retPtr;
         retBlk.appendIns(new irLoadNode(retVal, irType.I32, retPtr));
         retBlk.appendIns(new retNode(irType.I32, retVal));
-        curBlk.appendIns(new irStoreIns(irType.I32, new irConstInt(0), retPtr)); // i don't know what the ret val should be
+        curBlk.appendIns(new irStoreIns(irType.I32, new irConstInt(0), retPtr)); // i know what the ret val should be
         curBlk.terminalIns = new irBrIns(retBlk);
         it.nd.accept(this);
         u.appendBlock(retBlk);
+        mainNode = null;
+        currentScope = currentScope.parentScope;
+    }
+    @Override
+    public void visit(class_constructorNode it) {
+        currentScope = new irScope(currentScope);
+        irFuncNode u = new irFuncNode(it.name + "." + "build");
+        pr.appendFunc(u); u.returnType = irType.VOID;
+        curIrFuncNode = u;
+        irBlock bg = new irBlock("entry");
+        irBlock ed = new irBlock("ret");
+        irFuncRetBlk = ed; irFuncRetPtr = null;
+        u.appendBlock(bg); ed.appendIns(new retNode());
+        bg.terminalIns = new irBrIns(ed);
+        curBlk = bg;
+        irRegister reg = new irRegister("this", irType.PTR);
+        irRegister pr = new irRegister("thisPtr", irType.PTR);
+        irThisPtr = pr;
+        curBlk.appendIns(new irAllocIns(pr, irType.PTR));
+        curBlk.appendIns(new irStoreIns(irType.PTR, reg, pr));
+        currentScope.Name2Reg.put("this", pr);
+        curIrFuncNode.arName.add(reg);
+        curIrFuncNode.arType.add(irType.PTR);
+        it.nd.accept(this);
+        u.appendBlock(ed);
+        curIrFuncNode = null;
+        currentScope = currentScope.parentScope;
     }
     @Override
     public void visit(suiteNode it) {
@@ -161,23 +224,61 @@ public class IRBuilder implements ASTVisitor {
     }
     @Override
     public void visit(class_defNode it) {
-        curClass = new irClassNode(it.name);
-        className2ClassNode.put(it.name, curClass);
+        currentScope = new irScope(currentScope);
+        curClass = className2ClassNode.get(it.name);
         for (int i = 0; i < it.varLis.size(); i++) {
             variable_defNode u = it.varLis.get(i);
             u.accept(this);
         }
-
-
+        for (int i = 0; i < it.funcLis.size(); i++) {
+            func_defNode u = it.funcLis.get(i);
+            u.accept(this);
+        }
+        if (it.nd != null) it.nd.accept(this);
         curClass = null;
+        currentScope = currentScope.parentScope;
     }
     @Override
     public void visit(variable_defNode it) {
-
+        varDefTp = it.tp;
+        for (var u: it.lis) u.accept(this);
     }
     @Override
-    public void visit(class_constructorNode it) {
-
+    public void visit(varinitNode it) {
+        if (curIrFuncNode != null || mainNode != null) {
+            irType tp = trans2Irtype(varDefTp);
+            irRegister o = new irRegister(it.name, irType.PTR);
+            curBlk.appendIns(new irAllocIns(o, tp));
+            currentScope.Name2Reg.put(it.name, o);
+            if (it.nd != null) {
+                it.nd.accept(this);
+                curBlk.appendIns(new irStoreIns(tp, it.nd.irVal, o));
+            }
+        } else if (curClass == null) { //glbVar
+            irRegister o = currentScope.findReg(it.name);
+            irGlobalDef u = null;
+            irType type = trans2Irtype(varDefTp);
+            if (type == irType.I1) {
+                u = new irGlobalDef(o, type, new irConstBool(false));
+            } else if (type == irType.I32) u = new irGlobalDef(o, type, new irConstInt(0));
+            else u = new irGlobalDef(o, type, new irConstNull());
+            pr.glbVarLis.add(u);
+            if (it.nd != null) {
+                String funcName = it.name + ".GlbVarInit";
+                curBlk.appendIns(new irCallFuncIns(null, irType.VOID, funcName));
+                irFuncNode init = new irFuncNode(funcName);
+                irBlock bg = new irBlock("entry");
+                irBlock ed = new irBlock("ret");
+                ed.appendIns(new retNode());
+                bg.terminalIns = new irBrIns(ed);
+                curBlk = bg; init.appendBlock(curBlk);
+                it.nd.accept(this);
+                curBlk.appendIns(new irStoreIns(type, it.nd.irVal, o));
+                init.appendBlock(ed);
+                pr.appendFunc(init);
+            }
+        } else { // class def
+        }
     }
     @Override
     public void visit(exp_statNode it) {
@@ -185,7 +286,7 @@ public class IRBuilder implements ASTVisitor {
     }
     @Override
     public void visit(def_statNode it) {
-
+        it.nd.accept(this);
     }
     @Override
     public void visit(continue_statNode it) {
@@ -328,24 +429,19 @@ public class IRBuilder implements ASTVisitor {
         curBlk = netBlk; appendBlk(netBlk);
     }
     @Override
-    public void visit(paralistNode it) {
-        for (int i = 0 ;i < it.name.size(); i++) {
-            irRegister reg = new irRegister("", trans2Irtype(it.tpLis.get(i)));
-            irRegister pr = new irRegister("", irType.PTR);
-            curBlk.appendIns(new irAllocIns(pr, reg.tp));
-            curBlk.appendIns(new irStoreIns(reg.tp, reg, pr));
-            currentScope.Name2Reg.put(it.name.get(i), pr);
-        }
-    }
-    @Override
     public void visit(empty_statNode it) {} // done
     @Override
-    public void visit(varinitNode it) {
-
-    }
-    @Override
     public void visit(iden_exprNode it) {
-        irRegister o = currentScope.findReg(it.name);
+        // curclass should be considered;
+        irRegister o = null;
+        if (curClass == null || !curClass.name2Id.containsKey(it.name)) o = currentScope.findReg(it.name);
+        else {
+            irRegister u = new irRegister("thisVal", irType.PTR);
+            curBlk.appendIns(new irLoadNode(u, irType.PTR, irThisPtr));
+            int id = curClass.name2Id.get(it.name);
+            o = new irRegister("idenPtr", irType.PTR);
+            curBlk.appendIns(new irGetEleIns(o, irThisPtr, new irConstInt(id)));
+        }
         it.irPtr = o;
         irRegister oo = new irRegister("", trans2Irtype(it.nodeType));
         it.irVal = oo;
@@ -358,7 +454,7 @@ public class IRBuilder implements ASTVisitor {
         } else if (it.s.equals("false")) {
             it.irVal = new irConstBool(false);
         } else if (it.s.equals("this")) {
-            irRegister o = new irRegister("ths", irType.PTR);
+            irRegister o = new irRegister("this", irType.PTR);
             it.irVal = o;
             curBlk.appendIns(new irLoadNode(o, irType.PTR, irThisPtr));
         } else if (it.s.equals("null")) {
@@ -378,13 +474,36 @@ public class IRBuilder implements ASTVisitor {
     }
     @Override
     public void visit(class_call_exprNode it) {
-
+        it.nd.accept(this);
+        String funcName = null;
+        if (it.nd.nodeType.dim > 0) {
+            funcName = "array";
+        } else {
+            funcName = it.nd.nodeType.typename;
+        }
+        funcName += "." + it.funcname;
+        irRegister o = new irRegister(funcName, trans2Irtype(it.nodeType));
+        it.irVal = o;
+        irCallFuncIns e = new irCallFuncIns(o, trans2Irtype(it.nodeType), funcName);
+        e.paraLis.add(it.nd.irVal);
+        if (it.funcCallLis != null) {
+            for (var w : it.funcCallLis.lis) {
+                w.accept(this);
+                e.paraLis.add(w.irVal);
+            }
+        }
+        curBlk.appendIns(e);
     }
     @Override
     public void visit(class_exprNode it) {
         it.nd.accept(this);
-//        classNameToId
-//        it.name;
+        int id = curClass.name2Id.get(it.name);
+        irRegister o = new irRegister("class_ele", irType.PTR);
+        curBlk.appendIns(new irGetEleIns(o, (irRegister) it.nd.irVal, new irConstInt(id)));
+        it.irPtr = o;
+        irRegister oo = new irRegister("class_exp", trans2Irtype(it.nodeType));
+        curBlk.appendIns(new irLoadNode(oo, oo.tp, o));
+        it.irVal = oo;
     }
     @Override
     public void visit(array_exprNode it) {

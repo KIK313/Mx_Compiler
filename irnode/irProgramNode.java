@@ -4,7 +4,7 @@ import java.util.List;
 public class irProgramNode {
     public irMainNode mainNd;
     public List<irFuncNode> funcLis;
-    public List<irGlobalVar> glbVarLis;
+    public List<irGlobalDef> glbVarLis;
     public List<irClassNode> classLis;
     public List<irGlobalStringConst> strLis;
     public irProgramNode() {
@@ -17,7 +17,7 @@ public class irProgramNode {
     public void appendFunc(irFuncNode nd) {
         funcLis.add(nd);
     }
-    public void appendVar(irGlobalVar nd) {
+    public void appendVar(irGlobalDef nd) {
         glbVarLis.add(nd);
     }
     public void appendClass(irClassNode nd) {

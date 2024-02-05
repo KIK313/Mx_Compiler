@@ -7,7 +7,7 @@ public class irFuncNode {
     public String funcName;
     public irType returnType;
     public List<irType> arType;
-    public List<String> arName;
+    public List<irEntity> arName;
     public List<irBlock> blockLis;
     public irFuncNode(String name) {
         this.funcName = name;
