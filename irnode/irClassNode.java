@@ -7,6 +7,7 @@ public class irClassNode {
     public String name;
     public ArrayList<irType> tp;
     public HashMap<String, Integer> name2Id;
+    public boolean isBuild = false;
     public irClassNode(String name) {
         this.name = name;
         this.tp = new ArrayList<>();

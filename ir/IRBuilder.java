@@ -3,6 +3,7 @@ import ast.*;
 import irnode.*;
 import utl.Type;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -192,7 +193,7 @@ public class IRBuilder implements ASTVisitor {
     @Override
     public void visit(class_constructorNode it) {
         currentScope = new irScope(currentScope);
-        irFuncNode u = new irFuncNode(it.name + "." + "build");
+        irFuncNode u = new irFuncNode(it.name + ".build");
         pr.appendFunc(u); u.returnType = irType.VOID;
         curIrFuncNode = u;
         irBlock bg = new irBlock("entry");
@@ -234,7 +235,7 @@ public class IRBuilder implements ASTVisitor {
             func_defNode u = it.funcLis.get(i);
             u.accept(this);
         }
-        if (it.nd != null) it.nd.accept(this);
+        if (it.nd != null) {curClass.isBuild = true; it.nd.accept(this);}
         curClass = null;
         currentScope = currentScope.parentScope;
     }
@@ -600,9 +601,91 @@ public class IRBuilder implements ASTVisitor {
             curBlk.appendIns(new irBiExprIns(o, "xor",irType.I32, it.nd.irVal, new irConstInt(-1)));
         }
     }
+    public irRegister getNewArray(Type tp, ArrayList<irEntity> lis, ArrayList<irEntity> lenLis, int pos) {
+        if (pos == tp.dim) {
+            irRegister o = new irRegister("new_exp", irType.PTR);
+            irClassNode c = className2ClassNode.get(tp.typename);
+            irCallFuncIns f = new irCallFuncIns(o, irType.PTR, "malloc");
+            f.paraLis.add(new irConstInt(c.tp.size() * 4));
+            curBlk.appendIns(f);
+            if (c.isBuild) {
+                irCallFuncIns build_f = new irCallFuncIns(null, irType.VOID, curClass.name + ".build");
+                build_f.paraLis.add(o);
+                curBlk.appendIns(build_f);
+            }
+            return o;
+        }
+        irRegister o = new irRegister("arr", irType.PTR);
+        irCallFuncIns f = new irCallFuncIns(o, irType.PTR,"malloc");
+        f.paraLis.add(lis.get(pos));
+        curBlk.appendIns(f);
+        curBlk.appendIns(new irStoreIns(irType.I32, lenLis.get(pos), o));
+        irRegister ans = new irRegister("ans", irType.PTR);
+        curBlk.appendIns(new irGetEleIns(ans, o, new irConstInt(1)));
+        Type type = tp; type.dim = 0;
+        if (pos + 1 < lis.size() || (lis.size() == tp.dim && trans2Irtype(type) == irType.PTR)) {
+            irRegister forI = new irRegister("i", irType.PTR);
+            curBlk.appendIns(new irAllocIns(forI, irType.I32));
+            curBlk.appendIns(new irStoreIns(irType.I32, new irConstInt(0), forI));
+            irBlock con_blk = new irBlock("con_blk");
+            irBlock body_blk = new irBlock("body_blk");
+            irBlock stp_blk = new irBlock("stp_blk");
+            irBlock ed_blk = new irBlock("ed_blk");
+            ed_blk.terminalIns = curBlk.terminalIns; curBlk.appendIns(new irBrIns(con_blk));
+            curBlk = con_blk; appendBlk(curBlk);
+            irRegister varI = new irRegister("varI", irType.I32);
+            curBlk.appendIns(new irLoadNode(varI, irType.I32, forI));
+            irRegister con = new irRegister("con", irType.I1);
+            curBlk.appendIns(new irCmpIns(con, "slt", irType.I32, varI, lenLis.get(pos)));
+            curBlk.appendIns(new irConBrIns(con, body_blk, ed_blk));
+            curBlk = stp_blk;
+            irRegister o1 = new irRegister("o1", irType.I32);
+            irRegister o2 = new irRegister("o2", irType.I32);
+            curBlk.appendIns(new irLoadNode(o1, irType.I32, forI));
+            curBlk.appendIns(new irBiExprIns(o2, "add", irType.I32, o1, new irConstInt(1)));
+            curBlk.appendIns(new irStoreIns(irType.I32, o2, forI));
+            curBlk.appendIns(new irBrIns(con_blk));
+            curBlk.terminalIns = new irBrIns(con_blk);
+            curBlk = body_blk; curBlk.terminalIns = new irBrIns(stp_blk);
+            appendBlk(curBlk); appendBlk(stp_blk);
+            irRegister addr = new irRegister("addr", irType.PTR);
+            irRegister index = new irRegister("i", irType.I32);
+            curBlk.appendIns(new irLoadNode(index, irType.I32, forI));
+            curBlk.appendIns(new irGetEleIns(addr, ans, index));
+            irRegister t = getNewArray(tp, lis, lenLis, pos + 1);
+            curBlk.appendIns(new irStoreIns(irType.PTR, t, addr));
+            curBlk = ed_blk; appendBlk(curBlk);
+        }
+        return ans;
+    }
     @Override
     public void visit(new_exprNode it) {
+        ArrayList<irEntity> sizLis = new ArrayList<irEntity>();
+        ArrayList<irEntity> lenLis = new ArrayList<irEntity>();
+        for (int i = 0; i < it.nd.lis.size(); i++) {
+            expressionNode u = it.nd.lis.get(i);
+            u.accept(this);
+            lenLis.add(u.irVal);
+            if (u.irVal instanceof irConstInt) sizLis.add(new irConstInt(((irConstInt) u.irVal).val*4+4));
+            else {
+                irRegister o = new irRegister("o", irType.I32);
+                irRegister o1 = new irRegister("o1", irType.I32);
+                curBlk.appendIns(new irBiExprIns(o1, "mul", irType.I32, u.irVal, new irConstInt(4)));
+                curBlk.appendIns(new irBiExprIns(o, "add", irType.I32, o1, new irConstInt(4)));
+                sizLis.add(o);
+            }
+        }
+        it.irVal = getNewArray(it.nodeType, sizLis, lenLis, 0);
+        if (it.nodeType.dim > 0) {
+            if (it.nd.lis.size() > 0) {
 
+            } else {
+                irRegister o = new irRegister("new_exp", irType.PTR);
+                it.irVal = o;
+            }
+        } else {
+
+        }
     }
     @Override
     public void visit(biexprNode it) {
