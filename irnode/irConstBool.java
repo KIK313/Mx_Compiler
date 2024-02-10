@@ -6,4 +6,9 @@ public class irConstBool extends irConst {
         super(irType.I1);
         this.tf = tf;
     }
+    @Override
+    public String printIr() {
+        if (tf) return "true";
+        else return "false";
+    }
 }

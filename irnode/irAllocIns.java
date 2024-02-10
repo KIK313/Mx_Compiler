@@ -8,10 +8,8 @@ public class irAllocIns extends irInsNode {
         this.tp = tp;
     }
     @Override
-    public void printIr() {
-//        System.out.print("%");
-//        System.out.print(name);
-//        System.out.print(" = alloca ");
-//        irFuncNode.printType(tp);
+    public String printIr() {
+        String s = reg.printIr() + " = alloca " + irFuncNode.printType(tp) + "\n";
+        return s;
     }
 }

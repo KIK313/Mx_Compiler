@@ -7,24 +7,10 @@ Verdict: Success
 Origin Package: Semantic Extended
 */
 int x = 1;
-int i = j;
-bool b(bool x){
-    return x;
-}
-class C{
-    C(){
-        x();
-        {int x;}
-    }
-    void x(){}
-};
+int i = 0;
 int main(){
-    string x = "789dcbadcba\n";
+    string x = "Mx*";
     int y;
-    C c;
-    c.x();
-    b(true);
-    {y = x.parseInt();
-    int x = y;}
+    y = 0;
     return y;
 }

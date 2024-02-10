@@ -7,7 +7,7 @@ public class irBrIns extends irTerIns {
         this.desBlk = desBlk;
     }
     @Override
-    public void printIr() {
-
+    public String printIr() {
+        return "br label " + desBlk.printName() + "\n";
     }
 }

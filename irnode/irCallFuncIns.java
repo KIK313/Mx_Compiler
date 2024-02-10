@@ -15,19 +15,15 @@ public class irCallFuncIns extends irInsNode {
         this.paraLis = new ArrayList<>();
     }
     @Override
-    public void printIr() {
-//        System.out.print(resId);
-//        System.out.print(" = call ");
-//        irFuncNode.printType(tp);
-//        System.out.print("@");
-//        System.out.print(funcName);
-//        System.out.print("(");
-//        for (int i = 0; i < arName.size(); i++) {
-//            if (i > 0) System.out.print(" , ");
-//            irFuncNode.printType(arType.get(i));
-//            System.out.print(arName.get(i));
-//        }
-//        System.out.println(")");
+    public String printIr() {
+        String s;
+        if (tp == irType.VOID) s = "call void @" + funcName + "(";
+            else s = res.printIr() + " = call " + irFuncNode.printType(tp) + " @" + funcName + "(";
+        for (int i = 0; i < paraLis.size(); i++) {
+            if (i > 0) s += ", ";
+            s += irFuncNode.printType(paraLis.get(i).tp) + " " + paraLis.get(i).printIr();
+        }
+        s += ")\n";
+        return s;
     }
-
 }

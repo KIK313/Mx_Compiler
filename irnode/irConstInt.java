@@ -6,4 +6,8 @@ public class irConstInt extends irConst {
         super(irType.I32);
         this.val = val;
     }
+    @Override
+    public String printIr() {
+        return Integer.toString(val);
+    }
 }

@@ -18,38 +18,33 @@ public class irFuncNode {
     public void appendBlock(irBlock blk) {
         blockLis.add(blk);
     }
-    public void printIr() {
-        System.out.print("define ");
-        printType(returnType);
-        System.out.print("@");
-        System.out.print(funcName);
-        System.out.print("(");
+    public String printIr() {
+        //System.out.println(funcName + " -100");
+        String s = "define " + irFuncNode.printType(returnType) + " @" + funcName + "(";
         for (int i = 0; i < arType.size(); i++) {
-            if (i > 0) System.out.print(", ");
-            printType(arType.get(i));
-            System.out.print("%");
-            System.out.print(arName.get(i));
+            if (i > 0) s += ", ";
+            s += irFuncNode.printType(arType.get(i)) + " " + arName.get(i).printIr();
         }
-        System.out.println(") {");
-        for (irBlock blockLi : blockLis) {
-            blockLi.printIr();
-        }
-        System.out.println("}");
+        s += ") {\n";
+        for (irBlock blockLi : blockLis) s += blockLi.printIr();
+        s += "}\n";
+        return s;
     }
-    static void printType(irType nd) {
+    static String printType(irType nd) {
         switch (nd) {
             case I32 -> {
-                System.out.print("i32 ");
+                return "i32";
             }
             case I1 -> {
-                System.out.print("i1 ");
+                return "i1";
             }
             case PTR -> {
-                System.out.print("ptr ");
+                return "ptr";
             }
             case VOID -> {
-                System.out.print("void ");
+                return "void";
             }
         }
+        return null;
     }
 }

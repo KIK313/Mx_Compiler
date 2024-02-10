@@ -5,6 +5,7 @@ import utl.Type;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 
 public class IRBuilder implements ASTVisitor {
@@ -13,13 +14,12 @@ public class IRBuilder implements ASTVisitor {
     public irProgramNode pr;
     public irScope currentScope = new irScope(null);
     public irFuncNode curIrFuncNode;
-    public Set<String> curClassMethod;
+    public Set<String> curClassMethod = null;
     public HashMap<String, irRegister> irString2Reg = new HashMap<>();
     public irBlock irFuncRetBlk;
     public irRegister irFuncRetPtr;
     public irRegister irThisPtr = null;
     public HashMap<String, irClassNode> className2ClassNode = new HashMap<>();
-    public irMainNode mainNode = null;
     public irClassNode curClass = null;
     public Type varDefTp;
     public int blkId = 0;
@@ -28,9 +28,7 @@ public class IRBuilder implements ASTVisitor {
     public Type voidTp = new Type("void");
     public Type stringTp = new Type("string");
     public void appendBlk(irBlock blk) {
-        // there is some problems
-        if (curIrFuncNode != null) curIrFuncNode.appendBlock(blk);
-        else mainNode.appendBlock(blk);
+        curIrFuncNode.appendBlock(blk);
     }
     public irType trans2Irtype(Type tp) {
         if (tp.equal(intTp)) return irType.I32;
@@ -121,7 +119,6 @@ public class IRBuilder implements ASTVisitor {
         if (curClass == null) funcName = it.name;
         else funcName = curClass.name + "." + it.name;
         irFuncRetBlk = null; irFuncRetPtr = null;
-        mainNode = null;
         currentScope = new irScope(currentScope);
         irFuncNode fn = new irFuncNode(funcName);
         pr.funcLis.add(fn);
@@ -142,13 +139,13 @@ public class IRBuilder implements ASTVisitor {
         irBlock retBlk = new irBlock("retBlk");
         irFuncRetBlk = retBlk;
         curBlk.terminalIns = new irBrIns(retBlk);
-        if (curIrFuncNode.returnType == irType.VOID) retBlk.appendIns(new retNode());
+        if (curIrFuncNode.returnType == irType.VOID) retBlk.appendIns(new irRetNode());
         else {
             irRegister retVal = new irRegister("", curIrFuncNode.returnType);
             irRegister retPtr = new irRegister("", irType.PTR);
             irFuncRetPtr = retPtr;
             retBlk.appendIns(new irLoadNode(retVal, curIrFuncNode.returnType, retPtr));
-            retBlk.appendIns(new retNode(curIrFuncNode.returnType, retVal));
+            retBlk.appendIns(new irRetNode(curIrFuncNode.returnType, retVal));
         }
         it.nd.accept(this);
         fn.appendBlock(retBlk);
@@ -172,9 +169,9 @@ public class IRBuilder implements ASTVisitor {
     public void visit(main_defNode it) {
         currentScope = new irScope(currentScope);
         curIrFuncNode = null; curClass = null;
-        irMainNode u = new irMainNode();
+        irFuncNode u = new irFuncNode("main"); u.returnType = irType.I32;
         pr.mainNd = u;
-        mainNode = u;
+        curIrFuncNode = u;
         u.appendBlock(curBlk);
         irBlock retBlk = new irBlock("retBlk");
         irRegister retVal = new irRegister("", irType.I32);
@@ -182,12 +179,12 @@ public class IRBuilder implements ASTVisitor {
         irFuncRetBlk = retBlk;
         irFuncRetPtr = retPtr;
         retBlk.appendIns(new irLoadNode(retVal, irType.I32, retPtr));
-        retBlk.appendIns(new retNode(irType.I32, retVal));
+        retBlk.appendIns(new irRetNode(irType.I32, retVal));
         curBlk.appendIns(new irStoreIns(irType.I32, new irConstInt(0), retPtr)); // i know what the ret val should be
         curBlk.terminalIns = new irBrIns(retBlk);
         it.nd.accept(this);
         u.appendBlock(retBlk);
-        mainNode = null;
+        curIrFuncNode = null;
         currentScope = currentScope.parentScope;
     }
     @Override
@@ -199,7 +196,7 @@ public class IRBuilder implements ASTVisitor {
         irBlock bg = new irBlock("entry");
         irBlock ed = new irBlock("ret");
         irFuncRetBlk = ed; irFuncRetPtr = null;
-        u.appendBlock(bg); ed.appendIns(new retNode());
+        u.appendBlock(bg); ed.appendIns(new irRetNode());
         bg.terminalIns = new irBrIns(ed);
         curBlk = bg;
         irRegister reg = new irRegister("this", irType.PTR);
@@ -227,9 +224,13 @@ public class IRBuilder implements ASTVisitor {
     public void visit(class_defNode it) {
         currentScope = new irScope(currentScope);
         curClass = className2ClassNode.get(it.name);
+        curClassMethod = new HashSet<>();
         for (int i = 0; i < it.varLis.size(); i++) {
             variable_defNode u = it.varLis.get(i);
             u.accept(this);
+        }
+        for (int i = 0; i < it.funcLis.size(); i++) {
+            curClassMethod.add(it.funcLis.get(i).name);
         }
         for (int i = 0; i < it.funcLis.size(); i++) {
             func_defNode u = it.funcLis.get(i);
@@ -237,6 +238,7 @@ public class IRBuilder implements ASTVisitor {
         }
         if (it.nd != null) {curClass.isBuild = true; it.nd.accept(this);}
         curClass = null;
+        curClassMethod = null;
         currentScope = currentScope.parentScope;
     }
     @Override
@@ -246,7 +248,7 @@ public class IRBuilder implements ASTVisitor {
     }
     @Override
     public void visit(varinitNode it) {
-        if (curIrFuncNode != null || mainNode != null) {
+        if (curIrFuncNode != null) {
             irType tp = trans2Irtype(varDefTp);
             irRegister o = new irRegister(it.name, irType.PTR);
             curBlk.appendIns(new irAllocIns(o, tp));
@@ -268,15 +270,18 @@ public class IRBuilder implements ASTVisitor {
                 String funcName = it.name + ".GlbVarInit";
                 curBlk.appendIns(new irCallFuncIns(null, irType.VOID, funcName));
                 irFuncNode init = new irFuncNode(funcName);
+                init.returnType = irType.VOID;
                 irBlock bg = new irBlock("entry");
                 irBlock ed = new irBlock("ret");
-                ed.appendIns(new retNode());
+                ed.appendIns(new irRetNode());
                 bg.terminalIns = new irBrIns(ed);
+                irBlock cur = curBlk;
                 curBlk = bg; init.appendBlock(curBlk);
                 it.nd.accept(this);
                 curBlk.appendIns(new irStoreIns(type, it.nd.irVal, o));
                 init.appendBlock(ed);
                 pr.appendFunc(init);
+                curBlk = cur;
             }
         } else { // class def
         }

@@ -15,17 +15,7 @@ public class irGetEleIns extends irInsNode {
         this.index = index;
     }
     @Override
-    public void printIr() {
-//        System.out.print(resId);
-//        System.out.print(" =  getelementptr ");
-//        System.out.print(tp);
-//        System.out.print(", ptr ");
-//        System.out.print(ptrId);
-//        for (int i = 0; i < ls.size(); i++) {
-//            if (i > 0) System.out.print(", ");
-//            System.out.print("i32 ");
-//            System.out.print(ls.get(i));
-//        }
-//        System.out.println("");
+    public String printIr() {
+        return res.printIr() + " = getelementptr i32, ptr " + ptrReg.printIr() + ", " + irFuncNode.printType(index.tp) + " " + index.printIr() + "\n";
     }
 }

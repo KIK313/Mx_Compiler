@@ -8,14 +8,8 @@ public class irConBrIns extends irTerIns {
         this.trBlk = trBlk;
         this.falBlk = trBlk;
     }
-
     @Override
-    public void printIr() {
-//        System.out.print("br i1 %");
-//        System.out.print(conId);
-//        System.out.print(", label %");
-//        System.out.print(trLabel);
-//        System.out.print(", label %");
-//        System.out.println(faLabel);
+    public String printIr() {
+        return "br i1 " + cond.printIr() + ", label " + trBlk.printName() + ", label " + falBlk.printName() + "\n";
     }
 }

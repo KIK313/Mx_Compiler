@@ -14,18 +14,13 @@ public class irPhiIns extends irInsNode {
         blkLis = new ArrayList<>();
     }
     @Override
-    public void printIr() {
-//        System.out.print(resId);
-//        System.out.print(" = phi ");
-//        irFuncNode.printType(tp);
-//        for (int i = 0; i < valLis.size(); i++) {
-//            if (i > 0) System.out.print(", ");
-//            System.out.print("[");
-//            System.out.print(valLis.get(i));
-//            System.out.print(", ");
-//            System.out.print(labelLis.get(i));
-//            System.out.print("]");
-//        }
-//        System.out.print("\n");
+    public String printIr() {
+        String s = res.printIr() + " = phi " +  irFuncNode.printType(tp) + " ";
+        for (int i = 0; i < valLis.size(); i++) {
+            if (i > 0) s += ", ";
+            s += "[ " + valLis.get(i).printIr() + ", " + blkLis.get(i).printName() + " ]";
+        }
+        s += "\n";
+        return s;
     }
 }

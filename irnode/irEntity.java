@@ -5,4 +5,5 @@ abstract public class irEntity {
     public irEntity(irType tp) {
         this.tp = tp;
     }
+    public abstract String printIr();
 }

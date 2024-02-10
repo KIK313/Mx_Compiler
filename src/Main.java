@@ -12,6 +12,7 @@ import parser.*;
 import utl.mxErrorListener;
 import frontend.ASTBuilder;
 import utl.globalScope;
+import ir.*;
 public class Main {
     public static void main(String[] args) throws Exception {
         String name = "src/test.mx";
@@ -29,6 +30,9 @@ public class Main {
             globalScope gScope = new globalScope(null);
             new SymbolCollector(gScope).visit(nd);
             new SemanticChecker(gScope).visit(nd);
+            IRBuilder irTree = new IRBuilder();
+            irTree.visit(nd);
+            System.out.println(irTree.pr.printIr());
         } catch (error er) {
             System.err.println(er.toString());
             throw new RuntimeException();

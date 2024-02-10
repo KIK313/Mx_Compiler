@@ -10,11 +10,8 @@ public class irLoadNode extends irInsNode {
         this.ptr = ptrId;
     }
     @Override
-    public void printIr() {
-//        System.out.print(resId);
-//        System.out.print(" = load ");
-//        irFuncNode.printType(tp);
-//        System.out.print(", ptr ");
-//        System.out.println(ptrId);
+    public String printIr() {
+        String s = res.printIr() + " = load " + irFuncNode.printType(tp) + ", ptr " + ptr.printIr() + "\n";
+        return s;
     }
 }
