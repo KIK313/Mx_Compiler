@@ -30,7 +30,6 @@ public class irProgramNode {
         s += "declare void @printInt(i32)\n";
         s += "declare void @printlnInt(i32)\n";
         s += "declare ptr @getString()\n";
-        s += "declare ptr @getString()\n";
         s += "declare i32 @getInt()\n";
         s += "declare ptr @toString(i32)\n";
         s += "declare i32 @string.length(ptr)\n";

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Encoding">
-    <file url="file://$PROJECT_DIR$/parser/mxBaseListener.java" charset="GBK" />
-    <file url="file://$PROJECT_DIR$/parser/mxBaseVisitor.java" charset="GBK" />
-    <file url="file://$PROJECT_DIR$/parser/mxParser.java" charset="GBK" />
-    <file url="PROJECT" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/Makefile" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/mx.g4" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/Compiler.java" charset="UTF-8" />
+    <file url="PROJECT" charset="UTF-8" />
   </component>
 </project>

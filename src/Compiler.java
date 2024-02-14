@@ -13,10 +13,11 @@ import utl.mxErrorListener;
 import frontend.ASTBuilder;
 import utl.globalScope;
 import ir.*;
-public class Main {
+public class Compiler {
     public static void main(String[] args) throws Exception {
-        String name = "src/test.mx";
-        InputStream input = new FileInputStream(name);
+        //String name = "src/test.mx";
+        //InputStream input = new FileInputStream(name);
+        InputStream input = System.in;
         try {
             mxLexer lexer = new mxLexer(CharStreams.fromStream(input));
             lexer.removeErrorListeners();

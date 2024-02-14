@@ -4,7 +4,7 @@ import java.util.HashMap;
 
 public class irScope {
     public HashMap<String, irRegister> Name2Reg;
-    public irScope parentScope;
+    public irScope parentScope = null;
     public irBlock continue2Blk = null;
     public irBlock break2Blk = null;
     public irScope(irScope scope) {
@@ -14,6 +14,7 @@ public class irScope {
 
     public irRegister findReg(String name) {
         if (Name2Reg.containsKey(name)) return Name2Reg.get(name);
+        if (parentScope == null) return null;
         return parentScope.findReg(name);
     }
     public irBlock findContinueBlk() {

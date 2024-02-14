@@ -144,6 +144,7 @@ public class IRBuilder implements ASTVisitor {
             irRegister retVal = new irRegister("", curIrFuncNode.returnType);
             irRegister retPtr = new irRegister("", irType.PTR);
             irFuncRetPtr = retPtr;
+            curBlk.appendIns(new irAllocIns(retPtr, curIrFuncNode.returnType));
             retBlk.appendIns(new irLoadNode(retVal, curIrFuncNode.returnType, retPtr));
             retBlk.appendIns(new irRetNode(curIrFuncNode.returnType, retVal));
         }
@@ -180,6 +181,7 @@ public class IRBuilder implements ASTVisitor {
         irFuncRetPtr = retPtr;
         retBlk.appendIns(new irLoadNode(retVal, irType.I32, retPtr));
         retBlk.appendIns(new irRetNode(irType.I32, retVal));
+        curBlk.appendIns(new irAllocIns(retPtr, irType.I32));
         curBlk.appendIns(new irStoreIns(irType.I32, new irConstInt(0), retPtr)); // i know what the ret val should be
         curBlk.terminalIns = new irBrIns(retBlk);
         it.nd.accept(this);
@@ -269,7 +271,7 @@ public class IRBuilder implements ASTVisitor {
             if (it.nd != null) {
                 String funcName = it.name + ".GlbVarInit";
                 curBlk.appendIns(new irCallFuncIns(null, irType.VOID, funcName));
-                irFuncNode init = new irFuncNode(funcName);
+                irFuncNode init = new irFuncNode(funcName); curIrFuncNode = init;
                 init.returnType = irType.VOID;
                 irBlock bg = new irBlock("entry");
                 irBlock ed = new irBlock("ret");
@@ -278,6 +280,7 @@ public class IRBuilder implements ASTVisitor {
                 irBlock cur = curBlk;
                 curBlk = bg; init.appendBlock(curBlk);
                 it.nd.accept(this);
+                curIrFuncNode = null;
                 curBlk.appendIns(new irStoreIns(type, it.nd.irVal, o));
                 init.appendBlock(ed);
                 pr.appendFunc(init);
@@ -327,7 +330,7 @@ public class IRBuilder implements ASTVisitor {
         if (it.con != null) {
             curBlk.appendIns(new irBrIns(for_con));
             curBlk = for_con; appendBlk(curBlk);
-            it.accept(this);
+            it.con.accept(this);
             curBlk.appendIns(new irConBrIns(it.con.irVal, for_body, for_next));
         } else {
             curBlk.appendIns(new irBrIns(for_con));
@@ -361,7 +364,7 @@ public class IRBuilder implements ASTVisitor {
         if (it.con != null) {
             curBlk.appendIns(new irBrIns(for_con));
             curBlk = for_con; appendBlk(curBlk);
-            it.accept(this);
+            it.con.accept(this);
             curBlk.appendIns(new irConBrIns(it.con.irVal, for_body, for_next));
         } else {
             curBlk.appendIns(new irBrIns(for_con));
@@ -446,7 +449,7 @@ public class IRBuilder implements ASTVisitor {
             curBlk.appendIns(new irLoadNode(u, irType.PTR, irThisPtr));
             int id = curClass.name2Id.get(it.name);
             o = new irRegister("idenPtr", irType.PTR);
-            curBlk.appendIns(new irGetEleIns(o, irThisPtr, new irConstInt(id)));
+            curBlk.appendIns(new irGetEleIns(o, u, new irConstInt(id)));
         }
         it.irPtr = o;
         irRegister oo = new irRegister("", trans2Irtype(it.nodeType));
@@ -503,7 +506,8 @@ public class IRBuilder implements ASTVisitor {
     @Override
     public void visit(class_exprNode it) {
         it.nd.accept(this);
-        int id = curClass.name2Id.get(it.name);
+        irClassNode u = className2ClassNode.get(it.nd.nodeType.typename);
+        int id = u.name2Id.get(it.name);
         irRegister o = new irRegister("class_ele", irType.PTR);
         curBlk.appendIns(new irGetEleIns(o, (irRegister) it.nd.irVal, new irConstInt(id)));
         it.irPtr = o;
@@ -532,14 +536,8 @@ public class IRBuilder implements ASTVisitor {
         }
         String name;
         irRegister o = null;
-        if (is_method) {
-            name = curClass.name + "." + it.funcname;
-        }
-        else {
-            if (it.nodeType.equal(stringTp)) {
-                name = "string." + it.funcname;
-            } else name = it.funcname;
-        }
+        if (is_method) name = curClass.name + "." + it.funcname;
+            else name = it.funcname;
         irType tp = trans2Irtype(it.nodeType);
         if (tp != irType.VOID) {
             o = new irRegister("fc", tp);
@@ -571,11 +569,12 @@ public class IRBuilder implements ASTVisitor {
     public void visit(rightAddExprNode it) {
         it.nd.accept(this);
         irRegister o = new irRegister("", it.nd.irVal.tp);
-        it.irVal = o;
+        it.irVal = it.nd.irVal;
         int val;
         if (it.op.equals("++")) val = 1;
         else val = -1;
         curBlk.appendIns(new irBiExprIns(o, "add", irType.I32, it.nd.irVal, new irConstInt(val)));
+        curBlk.appendIns(new irStoreIns(irType.I32, o, it.nd.irPtr));
     }
     @Override
     public void visit(leftAddExprNode it) {
@@ -614,7 +613,7 @@ public class IRBuilder implements ASTVisitor {
             f.paraLis.add(new irConstInt(c.tp.size() * 4));
             curBlk.appendIns(f);
             if (c.isBuild) {
-                irCallFuncIns build_f = new irCallFuncIns(null, irType.VOID, curClass.name + ".build");
+                irCallFuncIns build_f = new irCallFuncIns(null, irType.VOID, tp.typename + ".build");
                 build_f.paraLis.add(o);
                 curBlk.appendIns(build_f);
             }
@@ -703,15 +702,16 @@ public class IRBuilder implements ASTVisitor {
             bi_net.terminalIns = curBlk.terminalIns;
             //curBlk.appendIns(new irConBrNode());
             if (it.op.equals("&&")) {
-                curBlk.appendIns(new irConBrIns(it.irVal, bi_r, bi_net));
-            } else curBlk.appendIns(new irConBrIns(it.irVal, bi_net, bi_r));
-            curBlk = bi_net; appendBlk(bi_net);
-            bi_net.terminalIns = new irBrIns(bi_net);
+                curBlk.appendIns(new irConBrIns(it.ls.irVal, bi_r, bi_net));
+            } else curBlk.appendIns(new irConBrIns(it.ls.irVal, bi_net, bi_r));
+            curBlk = bi_r; appendBlk(bi_r);
+            bi_r.terminalIns = new irBrIns(bi_net);
             it.rs.accept(this);
             curBlk = bi_net; appendBlk(bi_net);
             irRegister o = new irRegister("bi", irType.I1);
             it.irVal = o;
             irPhiIns phi = new irPhiIns(irType.I1);
+            phi.res = o;
             curBlk.appendIns(phi);
             phi.blkLis.add(fr); phi.blkLis.add(bi_r);
             if (it.op.equals("&&")) {
@@ -787,21 +787,21 @@ public class IRBuilder implements ASTVisitor {
         irBlock tr = new irBlock("tri_tr" + Integer.toString(Id));
         irBlock fa = new irBlock("tri_fa" + Integer.toString(Id));
         irBlock net = new irBlock("tri_net" + Integer.toString(Id));
+        irRegister o = new irRegister("tri", trans2Irtype(it.ls.nodeType));
+        it.irVal = o;
+        irPhiIns phi = new irPhiIns(trans2Irtype(it.ls.nodeType)); phi.res = o;
         net.terminalIns = curBlk.terminalIns;
         curBlk.terminalIns = new irConBrIns(it.con.irVal, tr, fa);
         curBlk = tr; appendBlk(tr);
         tr.terminalIns = new irBrIns(net);
         it.ls.accept(this);
+        phi.valLis.add(it.ls.irVal); phi.blkLis.add(curBlk);
         curBlk = fa; appendBlk(fa);
         fa.terminalIns = new irBrIns(net);
         it.rs.accept(this);
+        phi.valLis.add(it.rs.irVal); phi.blkLis.add(curBlk);
         curBlk = net; appendBlk(net);
-        irRegister o =new irRegister("tri", it.ls.irVal.tp);
-        it.irVal = o;
-        irPhiIns phi = new irPhiIns(it.ls.irVal.tp);
-        curBlk.appendIns(phi);
-        phi.valLis.add(it.ls.irVal); phi.valLis.add(it.rs.irVal);
-        phi.blkLis.add(tr); phi.blkLis.add(fa);
+        if (!it.nodeType.equal(voidTp)) curBlk.appendIns(phi);
     }
     @Override
     public void visit(assign_exprNode it) {

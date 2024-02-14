@@ -16,7 +16,7 @@ public class irBiExprIns extends irInsNode {
     @Override
     public String printIr() {
         String s = res.printIr();
-        s = s + " = " + op + " " + lhs.printIr() + " " + rhs.printIr() + "\n";
+        s = s + " = " + op + " " + irFuncNode.printType(tp) + " " + lhs.printIr() + ", " + rhs.printIr() + "\n";
         return s;
     }
 }

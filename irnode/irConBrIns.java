@@ -6,7 +6,7 @@ public class irConBrIns extends irTerIns {
     public irConBrIns(irEntity cond, irBlock trBlk, irBlock falBlk) {
         this.cond = cond;
         this.trBlk = trBlk;
-        this.falBlk = trBlk;
+        this.falBlk = falBlk;
     }
     @Override
     public String printIr() {
