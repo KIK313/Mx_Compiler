@@ -14,6 +14,8 @@ public class irPhiIns extends irInsNode {
         blkLis = new ArrayList<>();
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         String s = res.printIr() + " = phi " +  irFuncNode.printType(tp) + " ";
         for (int i = 0; i < valLis.size(); i++) {

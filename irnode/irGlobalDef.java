@@ -10,6 +10,7 @@ public class irGlobalDef {
         this.pointTp = pointTp;
         this.initVal = initVal;
     }
+    public void accept(irVisitor visitor) {visitor.visit(this);}
     public String printIr() {
         String s = glbVar.printIr() + " =  global " + irFuncNode.printType(initVal.tp) + " " + initVal.printIr() + "\n";
         return s;

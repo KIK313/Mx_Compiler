@@ -13,6 +13,8 @@ public class irCmpIns extends irInsNode {
         this.rs = rs;
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         String s = res.printIr() + " = icmp " + cmpOp + " " + irFuncNode.printType(tp) + " " + ls.printIr() + ", " + rs.printIr() + "\n";
         return s;

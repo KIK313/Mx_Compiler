@@ -14,6 +14,8 @@ public class irBiExprIns extends irInsNode {
         this.rhs = rs;
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         String s = res.printIr();
         s = s + " = " + op + " " + irFuncNode.printType(tp) + " " + lhs.printIr() + ", " + rhs.printIr() + "\n";

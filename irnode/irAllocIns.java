@@ -8,6 +8,8 @@ public class irAllocIns extends irInsNode {
         this.tp = tp;
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         String s = reg.printIr() + " = alloca " + irFuncNode.printType(tp) + "\n";
         return s;

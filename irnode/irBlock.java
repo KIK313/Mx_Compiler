@@ -21,6 +21,7 @@ public class irBlock {
             isEnd = true;
         } else ls.add(nd);
     }
+    public void accept(irVisitor visitor) {visitor.visit(this);}
     public String printIr() {
         //System.out.println(labelName);
         String s = labelName + ":\n";

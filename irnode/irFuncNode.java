@@ -18,6 +18,7 @@ public class irFuncNode {
     public void appendBlock(irBlock blk) {
         blockLis.add(blk);
     }
+    public void accept(irVisitor visitor) {visitor.visit(this);}
     public String printIr() {
         //System.out.println(funcName + " -100");
         String s = "define " + irFuncNode.printType(returnType) + " @" + funcName + "(";

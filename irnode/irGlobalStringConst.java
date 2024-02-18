@@ -36,6 +36,7 @@ public class irGlobalStringConst{
         res += "\\00";
         return res;
     }
+    public void accept(irVisitor visitor) {visitor.visit(this);}
     public String printIr() {
         String s = reg.printIr() + " = private unnamed_addr constant [" + Integer.toString(len) + " x i8] c\"" + irS + "\"\n";
         return s;

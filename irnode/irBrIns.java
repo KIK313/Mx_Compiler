@@ -7,6 +7,8 @@ public class irBrIns extends irTerIns {
         this.desBlk = desBlk;
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         return "br label " + desBlk.printName() + "\n";
     }

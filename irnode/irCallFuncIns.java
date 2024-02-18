@@ -15,6 +15,8 @@ public class irCallFuncIns extends irInsNode {
         this.paraLis = new ArrayList<>();
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         String s;
         if (tp == irType.VOID) s = "call void @" + funcName + "(";

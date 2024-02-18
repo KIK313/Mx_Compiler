@@ -10,6 +10,8 @@ public class irStoreIns extends irInsNode {
         this.desPtr = desPtr;
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         String s = "store " + irFuncNode.printType(tp) + " " + val.printIr() + ", ptr " + desPtr.printIr() + "\n";
         return s;

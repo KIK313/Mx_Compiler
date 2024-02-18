@@ -9,6 +9,8 @@ public class irConBrIns extends irTerIns {
         this.falBlk = falBlk;
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         return "br i1 " + cond.printIr() + ", label " + trBlk.printName() + ", label " + falBlk.printName() + "\n";
     }

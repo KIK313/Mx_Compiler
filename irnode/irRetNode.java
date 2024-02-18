@@ -12,6 +12,8 @@ public class irRetNode extends irTerIns {
         this.retId = ret;
     }
     @Override
+    public void accept(irVisitor visitor) {visitor.visit(this);}
+    @Override
     public String printIr() {
         if (isVoid) {
             return "ret void\n";

@@ -14,6 +14,7 @@ public class irProgramNode {
         classLis = new ArrayList<>();
         strLis = new ArrayList<>();
     }
+    public void accept(irVisitor visitor) {visitor.visit(this);}
     public void appendFunc(irFuncNode nd) {
         funcLis.add(nd);
     }

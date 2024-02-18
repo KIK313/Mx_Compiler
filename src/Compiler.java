@@ -15,9 +15,9 @@ import utl.globalScope;
 import ir.*;
 public class Compiler {
     public static void main(String[] args) throws Exception {
-        //String name = "src/test.mx";
-        //InputStream input = new FileInputStream(name);
-        InputStream input = System.in;
+        String name = "src/test.mx";
+        InputStream input = new FileInputStream(name);
+        //InputStream input = System.in;
         try {
             mxLexer lexer = new mxLexer(CharStreams.fromStream(input));
             lexer.removeErrorListeners();
