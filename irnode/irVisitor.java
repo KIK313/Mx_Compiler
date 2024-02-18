@@ -8,9 +8,6 @@ public interface irVisitor {
     void visit(irCallFuncIns it);
     void visit(irCmpIns it);
     void visit(irConBrIns it);
-    void visit(irConstBool it);
-    void visit(irConstInt it);
-    void visit(irConstNull it);
     void visit(irFuncNode it);
     void visit(irGetEleIns it);
     void visit(irGlobalDef it);

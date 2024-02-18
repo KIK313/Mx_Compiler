@@ -1,8 +1,8 @@
 package asmnode;
 
-public class asmCallFuncNode extends asmInsNode{
+public class asmCallFuncIns extends asmInsNode{
     String FuncName;
-    public asmCallFuncNode(String FuncName) {
+    public asmCallFuncIns(String FuncName) {
         this.FuncName = FuncName;
     }
     @Override
