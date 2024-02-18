@@ -9,6 +9,10 @@ public class irRegister extends irEntity {
         super(tp);
         this.name = name;
     }
+    public String getName() {
+        if (id == -1) id = ++regCnt;
+        return name + Integer.toString(id);
+    }
     @Override
     public String printIr() {
         String s;
