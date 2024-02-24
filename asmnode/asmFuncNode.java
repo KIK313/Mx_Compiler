@@ -6,6 +6,8 @@ public class asmFuncNode {
     public String funcName;
     public ArrayList<asmBlock> blkLis;
     public int regCnt = 0;
+    public int maxParaCnt = 0;
+    public int siz;
     public asmFuncNode() {
         blkLis = new ArrayList<>();
     }

@@ -7,7 +7,7 @@ public class asmCallFuncIns extends asmInsNode{
     }
     @Override
     public String printASM() {
-        String s = "";
+        String s = "call " + FuncName + "\n";
         return s;
     }
 }

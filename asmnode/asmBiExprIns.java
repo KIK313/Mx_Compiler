@@ -9,7 +9,7 @@ public class asmBiExprIns extends asmInsNode {
     }
     @Override
     public String printASM() {
-        String s = "";
+        String s = op + " t" + resId + ", t" + id1 + ", t" + id2 + "\n";
         return s;
     }
 }
