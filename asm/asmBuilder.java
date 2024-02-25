@@ -25,6 +25,7 @@ public class asmBuilder implements irVisitor{
         irReg2AsmReg.put(it.reg, u);
         asmReg r = newAsmReg();
         asmAddiIns h = new asmAddiIns("addi", curAsmFunc.siz - (r.idInFunc + 1) * 4 , "t0", "sp");
+        curAsmBlk.Lis.add(h);
         asmStoreIns o = new asmStoreIns(1);
         o.storeValId = "t0"; o.target = u;
         curAsmBlk.Lis.add(o);
@@ -36,13 +37,34 @@ public class asmBuilder implements irVisitor{
                 u.imm = ((irConstInt) o).val; u.rd = d;
                 curAsmBlk.Lis.add(u);
             }
+            if (o instanceof irConstBool) {
+                asmLiIns u = new asmLiIns();
+                if (((irConstBool) o).tf) u.imm = 1; else u.imm = 0;
+                u.rd = d;
+                curAsmBlk.Lis.add(u);
+            }
+            if (o instanceof irConstNull) {
+                asmLiIns u = new asmLiIns();
+                u.imm = 0; u.rd = d;
+                curAsmBlk.Lis.add(u);
+            }
         } else {
             if (o instanceof irRegister) {
-                asmReg u = irReg2AsmReg.get((irRegister) o);
-                asmLoadIns ld = new asmLoadIns();
-                ld.addrReg = u;
-                ld.desReg = d;
-                curAsmBlk.Lis.add(ld);
+                if (!((irRegister) o).isGlobal) {
+                    asmReg u = irReg2AsmReg.get((irRegister) o);
+                    asmLoadIns ld = new asmLoadIns();
+                    ld.addrReg = u;
+                    ld.desReg = d;
+                    curAsmBlk.Lis.add(ld);
+                } else {
+                    //                  if (((irRegister) o).getName().charAt(0) == '.') {
+                        curAsmBlk.Lis.add(new asmLaIns(((irRegister) o).getName(), d));
+//                    } else {
+//                        curAsmBlk.Lis.add(new asmLaIns(((irRegister) o).getName(), "t4"));
+//                        asmLoadIns h = new asmLoadIns(); h.addr = "t4"; h.desReg = d;
+//                        curAsmBlk.Lis.add(h);
+//                    }
+                }
             }
         }
     }
@@ -71,7 +93,7 @@ public class asmBuilder implements irVisitor{
             asmBlock u = new asmBlock();
             irBlk2AsmBlk.put(it.desBlk, u);
         }
-        asmBlock des = irBlk2AsmBlk.get(it);
+        asmBlock des = irBlk2AsmBlk.get(it.desBlk);
         des.asmBlockName = it.desBlk.labelName;
         curAsmBlk.Lis.add(new asmJIns(des));
     }
@@ -93,6 +115,7 @@ public class asmBuilder implements irVisitor{
             asmStoreIns u = new asmStoreIns(3); u.storeId = i; u.storeValId = "t0";
             curAsmBlk.Lis.add(u);
         }
+        curAsmBlk.Lis.add(new asmCallFuncIns(it.funcName));
         if (it.tp != irType.VOID) {
             asmReg u = newAsmReg();
             irReg2AsmReg.put(it.res, u);
@@ -156,16 +179,17 @@ public class asmBuilder implements irVisitor{
     @Override
     public void visit(irFuncNode it) {
         asmFuncNode u = new asmFuncNode();
+        pr.funcLis.add(u);
+        int siz = 0;
         for (var blk : it.blockLis) {
             for (var v : blk.ls) {
-                if (v instanceof irAllocIns) u.regCnt += 2;
-                else if (!(v instanceof irBrIns || v instanceof irConBrIns)) u.regCnt++;
+                if (v instanceof irAllocIns) siz += 2;
+                else if (!(v instanceof irBrIns || v instanceof irConBrIns)) siz++;
                 if (v instanceof irCallFuncIns && u.maxParaCnt < ((irCallFuncIns) v).paraLis.size())
                     u.maxParaCnt = ((irCallFuncIns) v).paraLis.size();
             }
         }
-        int h = (u.maxParaCnt + u.regCnt + 1) * 4;
-        int siz;
+        int h = (u.maxParaCnt + siz + 1) * 4;
         if (h % 16 != 0) siz = (h / 16 + 1) * 16;
         else siz = h;
         u.siz = siz;
@@ -173,6 +197,7 @@ public class asmBuilder implements irVisitor{
         u.funcName = it.funcName;
         retPtr = newAsmReg();
         irReg2AsmReg = new HashMap<>();
+        irBlk2AsmBlk = new HashMap<>();
         for (int i = 0; i < it.blockLis.size(); i++) {
             irBlock cur = it.blockLis.get(i);
             if (irBlk2AsmBlk.get(cur) == null) {
@@ -202,6 +227,9 @@ public class asmBuilder implements irVisitor{
     public void visit(irGetEleIns it) {
         getDone(it.index, "t0");
         getDone(it.ptrReg, "t1");
+        asmBiExprIns r1 = new asmBiExprIns("add"); r1.id1 = r1.id2 = r1.resId = 0;
+        asmBiExprIns r2 = new asmBiExprIns("add"); r2.id1 = r2.id2 = r2.resId = 0;
+        curAsmBlk.Lis.add(r1); curAsmBlk.Lis.add(r2);
         asmBiExprIns o = new asmBiExprIns("add");
         o.resId = 2; o.id1 = 0; o.id2 = 1;
         curAsmBlk.Lis.add(o);
@@ -240,13 +268,19 @@ public class asmBuilder implements irVisitor{
 //           }
 //       }
         getDone(it.val, "t0");
-        asmReg u = irReg2AsmReg.get(it.desPtr);
-        asmStoreIns o = new asmStoreIns(1); o.storeValId = "t0"; o.target = u;
-        curAsmBlk.Lis.add(o);
+        if (it.desPtr.isGlobal) {
+            curAsmBlk.Lis.add(new asmLaIns(it.desPtr.getName(), "t3"));
+            asmStoreIns o = new asmStoreIns(2); o.tg = "t3"; o.storeValId = "t0";
+            curAsmBlk.Lis.add(o);
+        } else {
+            getDone(it.desPtr, "t1");
+            asmStoreIns o = new asmStoreIns(2); o.tg = "t1"; o.storeValId = "t0";
+            curAsmBlk.Lis.add(o);
+        }
     }
     @Override
     public void visit(irRetNode it) {
-        if (it.tp != irType.VOID) {
+        if (!it.isVoid) {
             getDone(it.retId,"t0");
             curAsmBlk.Lis.add(new asmAddiIns("addi", 0, "a0", "t0"));
         }
@@ -261,6 +295,7 @@ public class asmBuilder implements irVisitor{
         for (var u: it.strLis) u.accept(this);
         for (var u: it.glbVarLis) u.accept(this);
         for (var u: it.funcLis) u.accept(this);
+        it.mainNd.accept(this);
     }
     @Override
     public void visit(irGlobalDef it) {
